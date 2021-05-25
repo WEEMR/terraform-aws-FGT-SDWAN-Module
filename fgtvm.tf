@@ -3,16 +3,19 @@
 resource "aws_network_interface" "eth0" {
   description = "FGT-port1"
   subnet_id   = aws_subnet.SDWAN_Public_Subnet_1.id
+  private_ips = [cidrhost(var.Public_Subnet_1, 10)]
 }
 
 resource "aws_network_interface" "eth1" {
   description = "FGT-port2"
   subnet_id   = aws_subnet.SDWAN_Public_Subnet_2.id
+  private_ips = [cidrhost(var.Public_Subnet_2, 10)]
 }
 
 resource "aws_network_interface" "eth2" {
   description       = "FGT-port3"
   subnet_id         = aws_subnet.SDWAN_Private_Subnet_1.id
+  private_ips       = [cidrhost(var.Private_Subnet, 10)]
   source_dest_check = false
 }
 
@@ -79,9 +82,13 @@ resource "aws_instance" "FGT" {
 
 
 data "template_file" "FortiGate" {
-  template = "${file("${var.bootstrap-fgtvm}")}"
+  template = file("${var.bootstrap-fgtvm}")
   vars = {
     adminsport = "${var.adminsport}"
+    port1_ip   = join("/", [element(tolist(aws_network_interface.eth0.private_ips), 0), cidrnetmask("${var.Public_Subnet_1}")])
+    port2_ip   = join("/", [element(tolist(aws_network_interface.eth1.private_ips), 0), cidrnetmask("${var.Public_Subnet_2}")])
+    port3_ip   = join("/", [element(tolist(aws_network_interface.eth2.private_ips), 0), cidrnetmask("${var.Private_Subnet}")])
+    pubsub1_gw = cidrhost(var.Public_Subnet_1, 1)
+    pubsub2_gw = cidrhost(var.Public_Subnet_2, 1)
   }
 }
-
